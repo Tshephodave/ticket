@@ -41,6 +41,14 @@ const Order = mongoose.model('Order', new Schema({
   approvedAt: Date
 }, { timestamps: true }));
 
+// Uploaded images live in MongoDB. Event.image, Gallery.url and Setting.heroImage
+// store the string "/api/images/<id>", which the API serves from this collection.
+const Image = mongoose.model('Image', new Schema({
+  data: { type: Buffer, required: true },
+  contentType: { type: String, required: true },
+  size: Number
+}, { timestamps: true }));
+
 const Gallery = mongoose.model('Gallery', new Schema({
   url: { type: String, required: true },
   caption: { type: String, default: '' }
@@ -56,4 +64,4 @@ const Setting = mongoose.model('Setting', new Schema({
 }));
 const getSettings = () => Setting.findOneAndUpdate({ key: 'main' }, { $setOnInsert: { key: 'main' } }, { upsert: true, new: true });
 
-module.exports = { Event, Order, Gallery, Setting, getSettings };
+module.exports = { Event, Order, Gallery, Image, Setting, getSettings };

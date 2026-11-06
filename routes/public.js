@@ -2,7 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const mongoose = require('mongoose');
 const QRCode = require('qrcode');
-const { Event, Order, Gallery, getSettings } = require('../models');
+const { Event, Order, Gallery, Image, getSettings } = require('../models');
 const { soldMap, withStock } = require('../stock');
 const { wrap } = require('../middleware');
 const { sendPdf } = require('../pdf');
@@ -10,6 +10,14 @@ const { sendPdf } = require('../pdf');
 const router = express.Router();
 const DEFAULT_PAYMENT = process.env.PAYMENT_INSTRUCTIONS ||
   'Ola will contact you on WhatsApp with payment details. Use your reference when you pay. Your tickets are released once payment is confirmed.';
+
+router.get('/images/:id', wrap(async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.sendStatus(404);
+  const img = await Image.findById(req.params.id);
+  if (!img) return res.sendStatus(404);
+  res.set({ 'Content-Type': img.contentType, 'Cache-Control': 'public, max-age=31536000, immutable', 'Cross-Origin-Resource-Policy': 'cross-origin' });
+  res.send(img.data);
+}));
 
 router.get('/settings', wrap(async (req, res) => {
   const s = await getSettings();

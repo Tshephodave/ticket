@@ -1,27 +1,27 @@
 const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
 const multer = require('multer');
 const jwt = require('jsonwebtoken');
-
-const UPLOADS = path.join(__dirname, 'uploads');
-fs.mkdirSync(UPLOADS, { recursive: true });
+const { Image } = require('./models');
 
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 if (!process.env.JWT_SECRET) console.warn('JWT_SECRET is not set: admin sessions end whenever the server restarts.');
 
-const uid = () => crypto.randomBytes(5).toString('hex');
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: UPLOADS,
-    filename: (req, file, cb) => cb(null, uid() + path.extname(file.originalname).toLowerCase())
-  }),
+  storage: multer.memoryStorage(),   // keep the file in memory, then save it to MongoDB
   limits: { fileSize: 8 * 1024 * 1024 },
   fileFilter: (req, file, cb) => cb(null, /^image\//.test(file.mimetype))
 });
 
-// Public address of this API, used to build image links. Set PUBLIC_URL when deployed.
-const fileUrl = (req, name) => `${(process.env.PUBLIC_URL || req.protocol + '://' + req.get('host')).replace(/\/$/, '')}/uploads/${name}`;
+// Saves an uploaded image into MongoDB and returns the string to store, e.g. "/api/images/66f..."
+async function saveImage(file) {
+  const img = await Image.create({ data: file.buffer, contentType: file.mimetype, size: file.size });
+  return `/api/images/${img.id}`;
+}
+// Removes the image behind such a string (ignores anything that is not one of ours)
+async function deleteImage(url) {
+  const m = /\/api\/images\/([0-9a-f]{24})/i.exec(url || '');
+  if (m) await Image.findByIdAndDelete(m[1]);
+}
 
 const signToken = () => jwt.sign({ role: 'admin' }, JWT_SECRET, { expiresIn: '12h' });
 function auth(req, res, next) {
@@ -32,4 +32,4 @@ function auth(req, res, next) {
 // Lets async route handlers pass errors to Express
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
-module.exports = { UPLOADS, upload, fileUrl, signToken, auth, wrap };
+module.exports = { upload, saveImage, deleteImage, signToken, auth, wrap };

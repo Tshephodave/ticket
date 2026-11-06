@@ -1,7 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const { UPLOADS } = require('./middleware');
 
 const PORT = process.env.PORT || 3000;
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || '*';
@@ -18,7 +17,6 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.json());
-app.use('/uploads', express.static(UPLOADS));
 
 app.get('/', (req, res) => res.json({ service: 'Ola tickets API', status: 'running' }));
 app.get('/api/health', (req, res) => res.json({ ok: true, database: mongoose.connection.readyState === 1 }));
